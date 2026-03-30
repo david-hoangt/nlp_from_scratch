@@ -6,7 +6,7 @@
 
 The single equation that changed NLP shipped in 2017 inside *Attention Is All You Need* (Vaswani et al.). Scaled dot-product self-attention replaced recurrence, convolution, and alignment models with one operation. Every LLM since, from GPT to DeepSeek, runs on variants of it.
 
-![“Attention is All You Need” paper ([https://arxiv.org/abs/1706.03762](https://arxiv.org/abs/1706.03762))](Self-Attention%20and%20Multi-Head%20Attention/image.png)
+![“Attention is All You Need” paper ([https://arxiv.org/abs/1706.03762](https://arxiv.org/abs/1706.03762))](self-attn/image.png)
 
 “Attention is All You Need” paper ([https://arxiv.org/abs/1706.03762](https://arxiv.org/abs/1706.03762))
 
@@ -43,7 +43,7 @@ Q = X @ W_Q    K = X @ W_K    V = X @ W_V
 
 Two tokens interact strongly when their query-key dot product is high. "announced" is looking for a subject, and "CEO" advertises exactly that. The diagram below shows this three-way split from a single input embedding:
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%201.png)
+![image.png](self-attn/image%201.png)
 
 *In practice (and in all implementations below), we set `d_v = d_k`. The math generalizes to `d_v ≠ d_k`, but most architectures use equal dimensions for simplicity.
 
@@ -64,7 +64,7 @@ Without scaling, each element in `Q @ K.T` is a sum of `d_k` products; variance 
 
 In our 7-token example, the attention matrix is `[1, 7, 7]`. The row for "announced" peaks on "CEO" (subject) and "earnings" (object).
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%202.png)
+![image.png](self-attn/image%202.png)
 
 That's the full mechanism. Translating it into code is straightforward.
 
@@ -97,7 +97,7 @@ Simple, but expensive. Every token attends to every other token.
 
 Complexity: `O(n² * d)` time and memory. A 4,096-token sequence → ~16.8M entries per head per layer. At 128k tokens → ~16.4B. This quadratic scaling motivates every efficiency variant (such as sparse attention, Flash Attention, etc). The chart below shows how the attention matrix grows with sequence length:
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%203.png)
+![image.png](self-attn/image%203.png)
 
 ## Key Takeaways
 
@@ -126,7 +126,7 @@ Output = Concat(head_1, ..., head_h) @ W_O
 
 Each head computes scaled dot-product attention in its own `d_k`-dimensional subspace. One learns subject-verb links ("announced" → "CEO"), another temporal relations ("announced" → "Friday"). `W_O` mixes these patterns into a unified representation. The diagram below traces data through all three stages:
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%204.png)
+![image.png](self-attn/image%204.png)
 
 ## The Dimension Split
 
@@ -195,7 +195,7 @@ In our 7-token example, "CEO" (position 1, 0-indexed) sees only ["The", "CEO"]. 
 
 Concretely: when generating "The CEO announced ___", position 3 attends only to ["The", "CEO", "announced"]. It cannot see "record" at position 4 or "Friday" at position 6. If position 3 could peek at position 5, it would just copy "earnings" instead of learning to predict it.
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%205.png)
+![image.png](self-attn/image%205.png)
 
 The mask handles training and shapes. But at inference time, the causal constraint unlocks a major optimization.
 
@@ -215,7 +215,7 @@ KV cache memory (bytes) = 2 * n_layers * n_heads * T * d_k * bytes_per_element
 
 This linear-in-T memory scaling is the dominant inference bottleneck. It's why long conversations slow down and why providers charge per-token. It drives GQA (share K/V across head groups) and MLA (compress K/V into a low-rank latent). The chart below shows KV cache memory scaling with sequence length:
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%206.png)
+![image.png](self-attn/image%206.png)
 
 *Gotcha: many heads assign disproportionate weight to the first token. Under the causal mask, it's the only position visible to all others, acting as a default "sink" for leftover attention mass (see StreamingLLM).*
 
@@ -265,7 +265,7 @@ Cross-attention connects two separate sequences: queries from one, keys/values f
 
 Consider translating "The CEO announced record earnings on Friday" (7 tokens) into Vietnamese: "Tổng giám đốc đã công bố thu nhập kỷ lục vào thứ Sáu" (13 tokens). The decoder generates the Vietnamese output token by token, and at each step it needs to look back at the English source to decide what to translate next. The two sequences have different lengths: 13 Vietnamese tokens querying 7 English tokens.
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%2010.png)
+![image.png](self-attn/image%2010.png)
 
 Each line connects a decoder token (bottom) to an encoder token (top), with thickness proportional to attention weight. Notice the rectangular structure: every decoder token can attend to all encoder tokens — no causal mask needed since the encoder output is already complete.
 
@@ -295,7 +295,7 @@ Each decoder block in the original Transformer stacks three sub-layers in sequen
 
 The encoder output is computed once and reused by every decoder layer at every generation step. The diagram below shows the full decoder block with all three sub-layers, residual connections, and the encoder output feeding K/V into the cross-attention layer:
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%208.png)
+![image.png](self-attn/image%208.png)
 
 This encoder-decoder design powered the original Transformer. But most modern text-only LLMs have moved away from it entirely.
 
@@ -312,7 +312,7 @@ For text-only LLMs, concatenation wins. Cross-attention remains dominant in mult
 
 The data flow diagram below maps directly to the code: X_Q feeds W_Q on the decoder side, X_KV feeds W_K and W_V on the encoder side, and both streams merge at the attention computation. Notice that `seq_len_q` and `seq_len_kv` are independent — 13 and 7 in our translation example — producing the rectangular matrix from earlier.
 
-![image.png](Self-Attention%20and%20Multi-Head%20Attention/image%207.png)
+![image.png](self-attn/image%207.png)
 
 ```python
 class CrossAttention(nn.Module):
