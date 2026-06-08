@@ -29,7 +29,7 @@ Each of our 7 tokens *"The CEO announced record earnings on Friday"* has a 64-di
 
 The simplest answer is to add a position-dependent vector directly to the token embedding before it enters the transformer.
 
-![Equation: x_i equals token_embedding_i plus PE(i) — the position-aware input is the sum of the token embedding and a position-dependent vector](asset/eq_01_absolute.png)
+![Equation: x_i equals token_embedding_i plus PE(i), the position-aware input is the sum of the token embedding and a position-dependent vector](asset/eq_01_absolute.png)
 
 - **token_embedding_i**: the token's learned embedding
 - **PE(i)**: a vector unique to position `i`
@@ -50,11 +50,7 @@ The original Transformer used deterministic sine and cosine functions at differe
 
 For our 7-token sentence with `d_model = 64`, this produces a `[7, 64]` matrix where each row is a unique position fingerprint. "The" at position 0 gets `PE(0)`, "CEO" gets `PE(1)`, and so on.
 
-
-<video controls autoplay muted loop playsinline preload="metadata" style="width: 100%; max-width: 900px;">
-  <source src="asset/sinusoidal_pe_animation.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+![Animation of sinusoidal PE for T = 128 and d_model = 64, showing fast dimensions cycling quickly while slow dimensions barely move](asset/sinusoidal_pe_animation.gif)
 *Animation: sinusoidal PE for `T = 128`, `d_model = 64`. Fast dimensions cycle every few tokens; slow dimensions barely move, carrying coarse position over long contexts.*
 
 - **Each position gets a unique vector**: no two rows are identical
